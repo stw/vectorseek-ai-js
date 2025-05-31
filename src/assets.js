@@ -1,4 +1,13 @@
 export const styles = `
+
+.vs-section { 
+    display: block;
+    background-color: #fff; 
+    padding: 10px 10px 10px 10px; 
+    margin-top: 10px; 
+    margin-bottom: 10px; 
+}
+
 #vectorseek_results {
   margin-bottom: 30px;
 }

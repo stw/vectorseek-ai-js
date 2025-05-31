@@ -38,7 +38,7 @@ jQuery(document).ready(function($) {
 
     function websocket_setup(data) {
         const host = 'vectorseek.ai';
-        const token = $('#vectorseek_key').val();
+        const token = $('#vectorseek').data('key');
         const context = 10;
         var message = '';
 

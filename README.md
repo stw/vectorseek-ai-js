@@ -41,9 +41,9 @@ Choose to include VectorSeek in your search results page, or add a VectorSeek qu
 2. Add the following code on your site.
 
 ```html
-<div id="app"></div>
-<input type="hidden" id="vectorseek_key" value="<Your Token>"/>
+<div id="vectorseek" data-key="<Your Key>"></div>
 <script type="module" src="https://cdn.jsdelivr.net/gh/stw/vectorseek-ai-js@main/src/main.js"></script>
+
 ```
 
 

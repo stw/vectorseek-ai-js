@@ -15,15 +15,15 @@ class VectorSeekWidget {
         const container = document.createElement("div");
         container.style.width = "95%";
         this.widgetContainer = document.createElement("div");
-        var el = document.getElementById('app');
-        el.appendChild(container);
+        var el = document.getElementById('vectorseek');
+        el.prepend(container);
         this.createWidgetContent();
         container.appendChild(this.widgetContainer);
     }
 
     createWidgetContent() {
         this.widgetContainer.innerHTML = `
-        <section id="vectorseek_querybox" class="section-abc">
+        <section id="vectorseek_querybox" class="vs-section">
           <div class="container-1100">
             <div class="vs-row">
               <div class="vs-col">
@@ -73,8 +73,8 @@ class VectorSeekWidget {
                       </div>
                       <div id="vectorseek_rating">
                         <input type="hidden" name="qlog_id" id="qlog_id" value=""/>
-                        <a id="vectorseek_up" href="#"><img src="https://vectorseek.ai/src/static/images/thumb-up.svg" alt="Thumbs Up" class="vectorseek_thumbs_up" role="button" tabindex="0"/></a>
-                        <a id="vectorseek_down" href="#"><img src="https://vectorseek.ai/src/static/images/thumb-down.svg" alt="Thumbs Down" class="vectorseek_thumbs_down" role="button" tabindex="0"/></a>
+                        <a id="vectorseek_up" href="#"><img src="https://vectorseek.ai/static/images/thumb-up.svg" alt="Thumbs Up" class="vectorseek_thumbs_up" role="button" tabindex="0"/></a>
+                        <a id="vectorseek_down" href="#"><img src="https://vectorseek.ai/static/images/thumb-down.svg" alt="Thumbs Down" class="vectorseek_thumbs_down" role="button" tabindex="0"/></a>
                       </div>
                     </div>
                   </div>

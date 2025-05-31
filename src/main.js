@@ -6,8 +6,6 @@ class VectorSeekWidget {
         this.initialize();
     }
 
-    widgetContent = null;
-
     async initialize() {
         const styleTag = document.createElement("style");
         styleTag.innerHTML = styles.replace(/^\s+|\n/gm, "");

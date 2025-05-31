@@ -73,8 +73,8 @@ class VectorSeekWidget {
                       </div>
                       <div id="vectorseek_rating">
                         <input type="hidden" name="qlog_id" id="qlog_id" value=""/>
-                        <a id="vectorseek_up" href="#"><img src="thumb-up.svg" alt="Thumbs Up" class="vectorseek_thumbs_up" role="button" tabindex="0"/></a>
-                        <a id="vectorseek_down" href="#"><img src="thumb-down.svg" alt="Thumbs Down" class="vectorseek_thumbs_down" role="button" tabindex="0"/></a>
+                        <a id="vectorseek_up" href="#"><img src="https://vectorseek.ai/src/static/images/thumb-up.svg" alt="Thumbs Up" class="vectorseek_thumbs_up" role="button" tabindex="0"/></a>
+                        <a id="vectorseek_down" href="#"><img src="https://vectorseek.ai/src/static/images/thumb-down.svg" alt="Thumbs Down" class="vectorseek_thumbs_down" role="button" tabindex="0"/></a>
                       </div>
                     </div>
                   </div>

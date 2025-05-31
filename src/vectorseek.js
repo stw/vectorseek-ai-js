@@ -111,7 +111,6 @@ jQuery(document).ready(function($) {
         });
 
         $(document).on('click', '#vectorseek_submit', function(e) {
-            websocket_setup();
             e.preventDefault();
             var query = $('#vectorseek_query').val();
             var context = 10;

@@ -40,9 +40,12 @@ Choose to include VectorSeek in your search results page, or add a VectorSeek qu
 1. Create an account on [VectorSeek](https://vectorseek.ai)
 2. Add the following code on your site.
 
+```html
 <div id="app"></div>
 <input type="hidden" name="vectorseek_key" value="<Your API Key>"/>
-<script type="module" src="/https://cdn.jsdelivr.net/gh/stw/vectorseek-ai-js@main/src/main.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/gh/stw/vectorseek-ai-js@main/src/main.js"></script>
+```
+
 
 ## Frequently Asked Questions
 

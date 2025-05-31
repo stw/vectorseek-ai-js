@@ -42,7 +42,7 @@ Choose to include VectorSeek in your search results page, or add a VectorSeek qu
 
 <div id="app"></div>
 <input type="hidden" name="vectorseek_key" value="<Your API Key>"/>
-<script type="module" src="/src/main.js?t=1748721166933"></script>
+<script type="module" src="/https://cdn.jsdelivr.net/gh/stw/vectorseek-ai-js@main/src/main.js"></script>
 
 ## Frequently Asked Questions
 

@@ -38,14 +38,13 @@ jQuery(document).ready(function($) {
 
     function websocket_setup(data) {
         const host = 'vectorseek.ai';
-        const token = $('#vectorseek').data('key');
+        var token = $('#vectorseek').data('key');
+        if (!token) {
+            token = $('#vectorseek').attr('data-key');
+        }
         const context = 10;
         var message = '';
-
         var proto = 'wss://';
-        // if (window.location.protocol == 'http:') {
-        //     proto = 'ws://';
-        // }
         var url = proto + host + '/ws/project/' + token;
 
         const chatSocket = new WebSocket( url );

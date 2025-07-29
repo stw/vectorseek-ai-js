@@ -42,7 +42,7 @@ jQuery(document).ready(function($) {
         if (!token) {
             token = $('#vectorseek').attr('data-key');
         }
-        const context = 10;
+        const context = 20;
         var message = '';
         var proto = 'wss://';
         var url = proto + host + '/ws/project/' + token;

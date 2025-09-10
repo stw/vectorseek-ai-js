@@ -1,7 +1,9 @@
-import "./jquery-3.7.1.min.js";
-import "./js.cookie.min.js";
-import "./commonmark.js";
-import Info from "./info.js";
+import "./vendor/jquery-3.7.1.min.js";
+import "./vendor/js.cookie.min.js";
+import "./vendor/commonmark.js";
+import "./vendor/purify.min.js";
+import smd from "./vendor/smd.min.js";
+import Info from "./vendor/info.js";
 
 jQuery(document).ready(function($) {
 
@@ -49,33 +51,48 @@ jQuery(document).ready(function($) {
 
         const chatSocket = new WebSocket( url );
 
-        var reader = new commonmark.Parser();
-        var writer = new commonmark.HtmlRenderer();
+        // var reader = new commonmark.Parser();
+        // var writer = new commonmark.HtmlRenderer();
+
+        const element  = document.getElementById("vectorseek_results");
+        const renderer = smd.default_renderer(element);
+        const parser   = smd.parser(renderer);
 
         chatSocket.onmessage = function(e) {
+            $('#vectorseek_loader-container').css('display', 'none');
             const data = JSON.parse(e.data);
 
             message += data.message;
 
-            $('#vectorseek_loader-container').css('display', 'none');
+            DOMPurify.sanitize(message);
 
-            if (data.message) {
-                var parsed = reader.parse(message);
-                var result = writer.render(parsed);
-                $('#vectorseek_results').html(result);
-            }
+            if (DOMPurify.removed.length) {
+                console.log("Found insecure code");
+                smd.parser_end(parser);
+            } else {
+                if (data.message) {
+                    smd.parser_write(parser, data.message);
+                }
 
-            if (data.contexts) {
-                $('#vectorseek_context').append('<div class="row pt-3 pb-3"><b>Context:</b></div>');
-                data.contexts.forEach(function(c) {
-                    $("#vectorseek_context").append('<div class="col pb-2">' + c + '</div>');
-                });
+                // if (data.message) {
+                //     var parsed = reader.parse(message);
+                //     var result = writer.render(parsed);
+                //     $('#vectorseek_results').html(result);
+                // }
 
-                $('#vectorseek_rate').removeClass('d-none');
-            }
+                if (data.contexts) {
+                    smd.parser_end(parser);
+                    $('#vectorseek_context').append('<div class="row pt-3 pb-3"><b>Context:</b></div>');
+                    data.contexts.forEach(function(c) {
+                        $("#vectorseek_context").append('<div class="col pb-2">' + c + '</div>');
+                    });
 
-            if (data.qlog_id) {
-                $('#qlog_id').val(data.qlog_id);
+                    $('#vectorseek_rate').removeClass('d-none');
+                }
+
+                if (data.qlog_id) {
+                    $('#qlog_id').val(data.qlog_id);
+                }
             }
 
         };

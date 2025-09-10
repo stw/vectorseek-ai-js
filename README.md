@@ -78,11 +78,17 @@ Yes, you can add your url with sitemap as one of the urls, ex. https://vectorsee
 
 ## Changelog
 
+### 0.0.3
+* Update to use streaming-markdown
+
+### 0.0.2
+* Minor updates
+
 ### 0.0.1
 * Initial release: private AI search with semantic indexing and chatbot widget
 
 ## Upgrade Notice
 
-### 0.0.1
-First stable release — secure AI search for your content.
+### 0.0.3
+Using smd — secure AI search for your content.
 

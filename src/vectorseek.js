@@ -3,7 +3,7 @@ import "./vendor/js.cookie.min.js";
 import "./vendor/commonmark.js";
 import "./vendor/purify.min.js";
 import smd from "./vendor/smd.min.js";
-import Info from "./vendor/info.js";
+import Info from "./info.js";
 
 jQuery(document).ready(function($) {
 

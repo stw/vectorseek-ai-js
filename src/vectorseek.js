@@ -81,7 +81,6 @@ jQuery(document).ready(function($) {
                 // }
 
                 if (data.contexts) {
-                    smd.parser_end(parser);
                     $('#vectorseek_context').append('<div class="row pt-3 pb-3"><b>Context:</b></div>');
                     data.contexts.forEach(function(c) {
                         $("#vectorseek_context").append('<div class="col pb-2">' + c + '</div>');
@@ -91,6 +90,7 @@ jQuery(document).ready(function($) {
                 }
 
                 if (data.qlog_id) {
+                    smd.parser_end(parser);
                     $('#qlog_id').val(data.qlog_id);
                 }
             }

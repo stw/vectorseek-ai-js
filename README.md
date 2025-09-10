@@ -42,7 +42,7 @@ Choose to include VectorSeek in your search results page, or add a VectorSeek qu
 
 ```html
 <div id="vectorseek" data-key="<Your Key>"></div>
-<script type="module" src="https://cdn.jsdelivr.net/gh/stw/vectorseek-ai-js@v0.0.4/src/main.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/gh/stw/vectorseek-ai-js@v0.0.5/src/main.js"></script>
 
 ```
 
@@ -78,6 +78,9 @@ Yes, you can add your url with sitemap as one of the urls, ex. https://vectorsee
 
 ## Changelog
 
+### 0.0.5
+* fix duplicate content
+
 ### 0.0.4
 * version bump
 
@@ -92,6 +95,6 @@ Yes, you can add your url with sitemap as one of the urls, ex. https://vectorsee
 
 ## Upgrade Notice
 
-### 0.0.4
+### 0.0.5
 AI search for your content.
 

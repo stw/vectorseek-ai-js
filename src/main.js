@@ -11,7 +11,8 @@ class VectorSeekWidget {
         styleTag.innerHTML = styles.replace(/^\s+|\n/gm, "");
         document.head.appendChild(styleTag);
         const container = document.createElement("div");
-        container.style.width = "95%";
+        // container.style.width = "95%";
+        container.class = "vectorseek_sub";
         this.widgetContainer = document.createElement("div");
         var el = document.getElementById('vectorseek');
         el.prepend(container);
@@ -44,7 +45,7 @@ class VectorSeekWidget {
                     <div class="vectorseek_loader-bar"></div>
                     <div class="vectorseek_loader-bar"></div>
                     <div class="vectorseek_loader-bar"></div>
-                </div> 
+                </div>
 
                 <div id="chat_error" class="vs-row vs-mb-3 d-none">
                     <div class="vs-col">

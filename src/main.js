@@ -12,7 +12,7 @@ class VectorSeekWidget {
         document.head.appendChild(styleTag);
         const container = document.createElement("div");
         // container.style.width = "95%";
-        container.class = "vectorseek_sub";
+        container.classList.add("vectorseek_sub");
         this.widgetContainer = document.createElement("div");
         var el = document.getElementById('vectorseek');
         el.prepend(container);

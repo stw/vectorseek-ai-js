@@ -1,0 +1,8 @@
+name: vs-js
+services:
+  web:
+    image: httpd:alpine
+    ports:
+      - 8500:80
+    volumes:
+      - .:/usr/local/apache2/htdocs/

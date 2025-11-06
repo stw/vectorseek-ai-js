@@ -39,26 +39,44 @@ jQuery(document).ready(function($) {
     }
 
     function websocket_setup(data) {
-        const host = 'vectorseek.ai';
+        var host = 'vectorseek.ai';
         var token = $('#vectorseek').data('key');
         if (!token) {
             token = $('#vectorseek').attr('data-key');
         }
+        var proto = 'wss://';
+
+        var test = $('#vectorseek').data('test');
+        console.log("Test: " + test);
+        if (test == true) {
+            proto = 'ws://';
+            host = 'localhost:8200';
+        }
+
         const context = 20;
         var message = '';
-        var proto = 'wss://';
         var url = proto + host + '/ws/project/' + token;
+        console.log("URL: " + url);
 
         const chatSocket = new WebSocket( url );
 
-        // var reader = new commonmark.Parser();
-        // var writer = new commonmark.HtmlRenderer();
+        // var reader = new commonmark.Parser({smart: true});
+        // var writer = new commonmark.HtmlRenderer({safe: false, softbreak: "<br/>"});
 
         const element  = document.getElementById("vectorseek_results");
-        const renderer = smd.default_renderer(element);
-        const parser   = smd.parser(renderer);
+        // const renderer = smd.default_renderer(element);
+        // const parser   = smd.parser(renderer);
+
+        var renderer = null;
+        var parser = null;
 
         chatSocket.onmessage = function(e) {
+
+            if (!parser || !renderer) {
+                renderer = smd.default_renderer(element);
+                parser   = smd.parser(renderer);
+            }
+
             $('#vectorseek_loader-container').css('display', 'none');
             const data = JSON.parse(e.data);
 
@@ -70,6 +88,7 @@ jQuery(document).ready(function($) {
                 console.log("Found insecure code");
                 smd.parser_end(parser);
             } else {
+                console.log(data);
                 if (data.message) {
                     smd.parser_write(parser, data.message);
                 }

@@ -13,12 +13,12 @@ jQuery(document).ready(function($) {
         setTimeout(
             function () {
                 if (socket.readyState === 1) {
-                    console.log("Connection is made")
+                    console.log("Connected.")
                     if (callback != null){
                         callback();
                     }
                 } else {
-                    console.log("wait for connection...")
+                    console.log("waiting for connection...")
                     waitForSocketConnection(socket, callback);
                 }
 
@@ -44,11 +44,11 @@ jQuery(document).ready(function($) {
         if (!token) {
             token = $('#vectorseek').attr('data-key');
         }
-        var proto = 'wss://';
 
+        var proto = 'wss://';
         var test = $('#vectorseek').data('test');
-        console.log("Test: " + test);
         if (test == true) {
+            console.log("Test: " + test);
             proto = 'ws://';
             host = 'localhost:8200';
         }
@@ -88,7 +88,7 @@ jQuery(document).ready(function($) {
                 console.log("Found insecure code");
                 smd.parser_end(parser);
             } else {
-                console.log(data);
+                // console.log(data);
                 if (data.message) {
                     smd.parser_write(parser, data.message);
                 }

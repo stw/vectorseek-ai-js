@@ -42,7 +42,7 @@ Choose to include VectorSeek in your search results page, or add a VectorSeek qu
 
 ```html
 <div id="vectorseek" data-key="<Your Key>"></div>
-<script type="module" src="https://cdn.jsdelivr.net/gh/stw/vectorseek-ai-js@v0.0.9/src/main.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/gh/stw/vectorseek-ai-js@v0.0.10/src/main.js"></script>
 
 ```
 
@@ -78,7 +78,7 @@ Yes, you can add your url with sitemap as one of the urls, ex. https://vectorsee
 
 ## Changelog
 
-### 0.0.9
+### 0.0.10
 * add sources and confidence
 
 ### 0.0.5

@@ -42,7 +42,7 @@ Choose to include VectorSeek in your search results page, or add a VectorSeek qu
 
 ```html
 <div id="vectorseek" data-key="<Your Key>"></div>
-<script type="module" src="https://cdn.jsdelivr.net/gh/stw/vectorseek-ai-js@v0.0.5/src/main.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/gh/stw/vectorseek-ai-js@v0.0.9/src/main.js"></script>
 
 ```
 
@@ -50,13 +50,13 @@ Choose to include VectorSeek in your search results page, or add a VectorSeek qu
 ## Frequently Asked Questions
 
 ### How does this work?
-VectorSeek indexes your site content and hosts a private vector database. When users ask questions, it retrieves and summarizes the most relevant answers from your indexed content using hosted LLMs or public LLMs if you choose. 
+VectorSeek indexes your site content and hosts a private vector database. When users ask questions, it retrieves and summarizes the most relevant answers from your indexed content using hosted LLMs or public LLMs if you choose.
 
 ### Is my data safe?
 Yes. All processing occurs through secure, private infrastructure. Your content
 is not used to train public AI models (unless you choose a public model).
 Multiple private and public Providers and Models are available in your
-VectorSeek account and you have the ability to choose from any model available. 
+VectorSeek account and you have the ability to choose from any model available.
 
 ### Can I control which content is indexed?
 Yes — you can include or exclude specific post types, categories, or pages in the plugin settings.
@@ -65,7 +65,7 @@ Yes — you can include or exclude specific post types, categories, or pages in 
 Absolutely. PDFs, pages, blog posts, and most custom post types are supported.
 
 ### Can I crawl sub-domains?
-Yes, you can crawl multiple domains and sub-domains as part of a single project. All crawled content will be used to generate answers. 
+Yes, you can crawl multiple domains and sub-domains as part of a single project. All crawled content will be used to generate answers.
 
 ### Can I use sitemap.xml?
 Yes, you can add your url with sitemap as one of the urls, ex. https://vectorseek.ai/sitemap.xml
@@ -77,6 +77,9 @@ Yes, you can add your url with sitemap as one of the urls, ex. https://vectorsee
 3. Example of AI-generated answers from site content
 
 ## Changelog
+
+### 0.0.9
+* add sources and confidence
 
 ### 0.0.5
 * fix duplicate content

@@ -6,3 +6,7 @@ services:
       - 8500:80
     volumes:
       - .:/usr/local/apache2/htdocs/
+      - ./cors.conf:/usr/local/apache2/conf/extra/cors.conf
+    # Tell Apache to include the new file at the end of its main config
+    command: >
+      sh -c "echo 'Include conf/extra/cors.conf' >> /usr/local/apache2/conf/httpd.conf && httpd-foreground"

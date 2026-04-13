@@ -7,7 +7,10 @@ import Info from "./info.js";
 
 jQuery(document).ready(function($) {
 
-    const endpoint = 'https://vectorseek.ai';
+    var endpoint = 'https://vectorseek.ai';
+    if ($('#vectorseek').data('env') == 'dev') {
+        endpoint = 'http://localhost:8200';
+    }
 
     function waitForSocketConnection(socket, callback){
         setTimeout(
@@ -46,11 +49,10 @@ jQuery(document).ready(function($) {
         }
 
         var proto = 'wss://';
-        var test = $('#vectorseek').data('test');
-        if (test == true) {
-            console.log("Test: " + test);
-            proto = 'ws://';
+        if ($('#vectorseek').data('env') == 'dev') {
+            console.log("Env: " + $('#vectorseek').data('env'));
             host = 'localhost:8200';
+            proto = 'ws://';
         }
 
         const context = 20;
@@ -98,6 +100,23 @@ jQuery(document).ready(function($) {
                 //     var result = writer.render(parsed);
                 //     $('#vectorseek_results').html(result);
                 // }
+
+                if (data.sources && data.sources.length > 0) {
+                    let citationsHtml = '<div class="citations"><h5>Sources:</h5>';
+                    data.sources.forEach(function(source, index) {
+                        const citationNum = index + 1;
+                        const confidence = getConfidenceClass(source.confidence);
+                        citationsHtml += `<div class="row mb-1 p-1 ${confidence}">
+                            <div class="col small text-muted">
+                            <span class="citation-number">${citationNum} - </span>
+                            <span class="confidence">${(source.confidence * 100).toFixed(0)}% - </span>
+                            <span class="citation-link"><a href="${source.url}" target="_blank">${source.title}</a></span>
+                            </div>
+                        </div>`;
+                    });
+                    citationsHtml += '</div>';
+                    $("#vectorseek_results").append(citationsHtml);
+                }
 
                 if (data.contexts) {
                     $('#vectorseek_context').append('<div class="row pt-3 pb-3"><b>Context:</b></div>');
@@ -168,12 +187,13 @@ jQuery(document).ready(function($) {
                 var info = new Info();
                 var i = info.info();
                 var ip = info.ip();
+                var client = 'js';
                 ip.then(ip => {
                     i['ip'] = ip;
-                    chatSocket.send(JSON.stringify({'type': 'query', 'uuid': uuid, 'query': query, 'context': context, 'info': i}));
+                    chatSocket.send(JSON.stringify({'type': 'query', 'uuid': uuid, 'query': query, 'context': context, 'info': i, 'client': client}));
                 }).catch(err => {
                     console.log(err);
-                    chatSocket.send(JSON.stringify({'type': 'query', 'uuid': uuid, 'query': query, 'context': context, 'info': info}));
+                    chatSocket.send(JSON.stringify({'type': 'query', 'uuid': uuid, 'query': query, 'context': context, 'info': info, 'client': client}));
                 });
 
             });
@@ -182,5 +202,13 @@ jQuery(document).ready(function($) {
     }
 
     websocket_setup();
+
+    function getConfidenceClass(confidence) {
+        if (confidence >= 0.85) return 'conf-excellent';  // Green - Excellent
+        if (confidence >= 0.70) return 'conf-good';  // Light Green - Good
+        if (confidence >= 0.60) return 'conf-fair';  // Yellow - Fair
+        if (confidence >= 0.40) return 'conf-poor'; // Orange - Poor
+        return 'conf-verypoor'; // Red - Very Poor
+    }
 
 });

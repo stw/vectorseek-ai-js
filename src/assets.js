@@ -1,11 +1,11 @@
 export const styles = `
 
-.vs-section { 
+.vs-section {
     display: block;
-    background-color: #fff; 
-    padding: 10px 10px 10px 10px; 
-    margin-top: 10px; 
-    margin-bottom: 10px; 
+    background-color: #fff;
+    padding: 10px 10px 10px 10px;
+    margin-top: 10px;
+    margin-bottom: 10px;
 }
 
 #vectorseek_results {
@@ -345,7 +345,7 @@ input {
     float: right;
 }
 
-/* loader */ 
+/* loader */
 
 #vectorseek_loader-container {
   display: none;
@@ -420,6 +420,43 @@ input {
     background-position: -100% center;
   }
 }
+
+.small {
+    font-size: 14px;
+}
+
+.text-muted {
+    color: #495057;
+}
+
+.mb-1 {
+    margin: 0 0 3px 0;
+}
+
+.pb-1 {
+    padding: 0 0 3px 0;
+}
+
+.p-1 {
+    padding: 2px;
+}
+
+.conf-excellent {
+    background-color: #79df91;
+}
+.conf-good {
+    background-color: #e8fbe8;
+}
+.conf-fair {
+    background-color: #ffc107;
+}
+.conf-poor {
+    background-color: #fd7e14;
+}
+.conf-verypoor {
+    background-color: #dc3545;
+}
+
 `;
 
 export const THUMBS_UP = `

@@ -26,16 +26,18 @@ export function isIOSLike() {
  * has been used, iOS keeps the "play and record" session, which routes sound to the quiet earpiece. Switching
  * to "playback" before speaking restores normal speaker volume. A no-op where the API does not exist.
  */
-export function setAudioSession(type) {
+export function setAudioSession(type, { force = false } = {}) {
     try {
         const session = typeof navigator !== "undefined" ? navigator.audioSession : null;
-        if (session && session.type !== type) session.type = type;
+        // force: assign even if the property already reads back as `type`. iOS can drop the session between
+        // utterances while the property keeps its old value, so a "no change" check would skip the fix.
+        if (session && (force || session.type !== type)) session.type = type;
     } catch (e) { /* not supported / not allowed: nothing to do */ }
 }
 
 /** A short silent WAV, used to unlock audio playback inside a user gesture. */
-function silentWavUrl() {
-    const samples = 400;                                   // 50 ms at 8 kHz
+function silentWavUrl(ms = 50) {
+    const samples = Math.round(8 * ms);                    // 8 kHz, 8-bit mono
     const bytes = new Uint8Array(44 + samples);
     const view = new DataView(bytes.buffer);
     const text = (o, str) => { for (let i = 0; i < str.length; i++) bytes[o + i] = str.charCodeAt(i); };
@@ -100,6 +102,7 @@ export class Speaker {
         this.idleMs = 30000;        // an answer with no new text for this long is treated as finished
         this.onBusyChange = null;   // (busy) => void, fired when reading starts / ends
         this._el = null;            // ONE shared <audio> element, unlocked once by a tap (see unlock())
+        this._keep = null;          // iOS: silent looping element that holds the audio session open while reading
         this._utterances = new Set();   // keep utterances referenced until they finish (browsers drop them otherwise)
         this.blocked = false;       // the browser refused to speak without a tap
         this._blocked = [];         // sentences waiting for that tap
@@ -150,7 +153,38 @@ export class Speaker {
         const busy = this.busy;
         if (busy === this._lastBusy) return;
         this._lastBusy = busy;
+        this._holdSession(busy);
         if (this.onBusyChange) this.onBusyChange(busy);
+    }
+
+    /**
+     * iOS: when a speech utterance ends, the audio session is released, and the next utterance can come up on the
+     * default route, which is the quiet earpiece once the microphone has been used. Playing a silent loop while an
+     * answer is being read keeps one "playback" session open across every sentence, so all of it stays on the
+     * speaker. Only on iOS, only while reading, and only once the element has been unlocked by a tap.
+     */
+    _holdSession(on) {
+        if (!isIOSLike() || !this._keep) return;
+        try {
+            if (on) {
+                setAudioSession("playback", { force: true });
+                const p = this._keep.play();
+                if (p && p.catch) p.catch(() => { /* not unlocked yet: nothing to hold */ });
+            } else {
+                this._keep.pause();
+            }
+        } catch (e) { /* best effort */ }
+    }
+
+    _keepEl() {
+        if (!this._keep && typeof Audio !== "undefined" && typeof URL !== "undefined" && URL.createObjectURL) {
+            this._keep = new Audio();
+            this._keep.loop = true;
+            this._keep.preload = "auto";
+            if (this._keep.setAttribute) this._keep.setAttribute("playsinline", "");
+            this._keep.src = silentWavUrl(1000);
+        }
+        return this._keep;
     }
 
     /** Count a sentence as pending until it has been spoken. Stale (cancelled) work is ignored. */
@@ -178,7 +212,7 @@ export class Speaker {
     start() {
         this.cancel();
         this.active = true;
-        setAudioSession("playback");       // the microphone may just have been used: restore full volume
+        setAudioSession("playback", { force: true });   // the microphone may just have been used: restore full volume
         this._armIdle();
         this._notify();
     }
@@ -210,6 +244,14 @@ export class Speaker {
                 const done = () => URL.revokeObjectURL(url);
                 if (p && p.then) p.then(done, done); else done();
             } catch (e) { /* best effort */ }
+            if (isIOSLike()) {
+                try {                                       // unlock the keep-alive element as well
+                    const keep = this._keepEl();
+                    const p = keep.play();
+                    const stop = () => { if (!this.busy) keep.pause(); };
+                    if (p && p.then) p.then(stop, () => {}); else stop();
+                } catch (e) { /* best effort */ }
+            }
         }
     }
 
@@ -336,7 +378,10 @@ export class Speaker {
             u.pitch = 1;
             const voice = this._voice();
             if (voice) u.voice = voice;
-            u.onend = finish;
+            u.onend = () => {
+                setAudioSession("playback", { force: true });   // re-assert before the next sentence: iOS may have dropped it
+                finish();
+            };
             u.onerror = (e) => {
                 const reason = e && e.error;
                 console.debug("[voice] speech error", reason);
@@ -345,7 +390,7 @@ export class Speaker {
                 finish();
             };
             this._utterances.add(u);           // browsers can garbage-collect a playing utterance and cut it off
-            setAudioSession("playback");
+            setAudioSession("playback", { force: true });
             if (synth.paused && synth.resume) synth.resume();   // iOS can be left paused after an interruption
             synth.speak(u);
         });
@@ -368,10 +413,10 @@ export class Speaker {
         return new Promise((resolve, reject) => {
             const audio = this._audioEl();
             this._audio = audio;
-            setAudioSession("playback");
+            setAudioSession("playback", { force: true });
             audio.volume = 1;
             this._endPlay = () => resolve(false);
-            audio.onended = () => { this._endPlay = null; resolve(true); };
+            audio.onended = () => { this._endPlay = null; setAudioSession("playback", { force: true }); resolve(true); };
             audio.onerror = () => { this._endPlay = null; reject(new Error("audio error")); };
             audio.src = url;
             const p = audio.play();

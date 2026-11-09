@@ -44,14 +44,15 @@ async function load({ ua = MAC, platform = "MacIntel", touch = 0, audioSession =
     }
     Object.defineProperty(globalThis, "navigator", { value: nav, configurable: true });
     globalThis.Audio = class {
-        constructor() { created.audio++; this.src = ""; this.paused = false; }
+        constructor() { created.audio++; this.src = ""; this.paused = false; this.loop = false; }
         play() {
             const el = this;
-            plays.push({ url: this.src, end: () => el.onended && el.onended() });
+            this.paused = false;
+            plays.push({ url: this.src, loop: this.loop, el, end: () => el.onended && el.onended() });
             if (Audio.reject) return Promise.reject(Object.assign(new Error("not allowed"), { name: Audio.reject }));
             return Promise.resolve();
         }
-        pause() { this.paused = true; }
+        pause() { this.paused = true; this.pauses = (this.pauses || 0) + 1; }
     };
     Audio.reject = null;
     let n = 0;
@@ -85,11 +86,34 @@ describe("audio session (restores full volume after the microphone has been used
         expect(sessions).toEqual(["playback"]);
     });
 
-    it("is requested again before each sentence and clip, but only changes when needed", async () => {
-        const { mod, sessions } = await load();
+    it("is re-asserted before every sentence and after each one ends, even if it already reads back as playback", async () => {
+        const { mod, sessions, spoken } = await load();
         const s = new mod.Speaker();
-        s.start(); s.feed("One. Two. Three. ");
-        expect(sessions).toEqual(["playback"]);                 // already playback: no redundant writes
+        s.start();                                              // playback (1)
+        s.feed("One. Two. ");                                   // before each utterance (2, 3)
+        const before = sessions.length;
+        spoken[0].onend(); await micro();                       // iOS may drop the session between utterances
+        expect(sessions.length).toBe(before + 1);
+        expect(sessions.every(t => t === "playback")).toBe(true);
+    });
+
+    it("the plain helper still skips a no-op change unless forced", async () => {
+        const { mod, sessions } = await load();
+        mod.setAudioSession("playback"); mod.setAudioSession("playback");
+        expect(sessions).toEqual(["playback"]);
+        mod.setAudioSession("playback", { force: true });
+        expect(sessions).toEqual(["playback", "playback"]);
+    });
+
+    it("is re-asserted when a server-voice clip ends", async () => {
+        const { mod, sessions, plays } = await load();
+        const s = new mod.Speaker();
+        s.setServer({ endpoint: "/speak", key: "k" });
+        s.start(); s.feed("One. Two. "); s.flush();
+        await wait();
+        const before = sessions.length;
+        plays[0].end(); await wait();
+        expect(sessions.length).toBeGreaterThan(before);
     });
 
     it("uses play-and-record while the microphone is recording and goes back to playback afterwards", async () => {
@@ -171,15 +195,16 @@ describe("browser voice hardening", () => {
 });
 
 describe("unlocking audio inside a tap (iOS only lets speech start from one)", () => {
-    it("on iOS the tap primes speech and plays a silent clip through the shared element", async () => {
+    it("on iOS the tap primes speech and plays silent clips (shared element + keep-alive element)", async () => {
         const { mod, spoken, plays } = await load({ ua: IPHONE, platform: "iPhone", touch: 5 });
         const s = new mod.Speaker();
         s.unlockForGesture();
         expect(spoken).toHaveLength(1);
         expect(spoken[0].text).toBe("");
         expect(spoken[0].volume).toBe(0);                       // silent
-        expect(plays).toHaveLength(1);
-        expect(plays[0].url).toMatch(/^blob:/);
+        expect(plays).toHaveLength(2);
+        expect(plays.every(p => /^blob:/.test(p.url))).toBe(true);
+        expect(plays.filter(p => p.loop)).toHaveLength(1);      // the keep-alive loop is unlocked too
     });
 
     it("elsewhere it does nothing (on desktop Safari speaking while recognition starts aborts the recognition)", async () => {
@@ -231,8 +256,10 @@ describe("server voice uses one shared, unlocked audio element", () => {
         s.unlockForGesture();                                    // the mic tap
         s.start(); s.feed("An answer. "); s.flush();
         await wait();
-        expect(created.audio).toBe(1);                           // not a fresh, locked element per clip
-        expect(plays).toHaveLength(2);                           // silent unlock clip + the real clip
+        expect(created.audio).toBe(2);                           // the shared element + the keep-alive element, never one per clip
+        const clips = plays.filter(p => !p.loop);
+        expect(clips).toHaveLength(2);                           // silent unlock clip + the real clip
+        expect(new Set(clips.map(p => p.el)).size).toBe(1);      // all through the same element
     });
 });
 
@@ -370,5 +397,82 @@ describe("recognition aborted right after it starts (Safari)", () => {
         recognizers[2].onerror({ error: "aborted" }); recognizers[2].onend();
         vi.advanceTimersByTime(400);
         expect(recognizers).toHaveLength(4);
+    });
+});
+
+
+describe("keeping the audio session on the speaker while an answer is read (iOS)", () => {
+    const ios = { ua: IPHONE, platform: "iPhone", touch: 5 };
+    const keepPlays = (plays) => plays.filter(p => p.loop);
+
+    it("plays a silent loop while the answer is being read and stops it afterwards", async () => {
+        const { mod, plays } = await load(ios);
+        const s = new mod.Speaker();
+        s.unlockForGesture();                                    // the mic tap: unlocks and primes the keep-alive element
+        await micro();
+        const keep = keepPlays(plays)[0].el;
+        expect(keep.loop).toBe(true);
+        expect(keep.paused).toBe(true);                          // idle: not holding anything
+
+        s.start();                                               // a voice answer begins
+        expect(keep.paused).toBe(false);
+        s.feed("One. Two. "); s.flush();
+        s.cancel();                                              // reading ends / Stop
+        expect(keep.paused).toBe(true);
+    });
+
+    it("keeps holding the session BETWEEN sentences (that is when iOS drops it)", async () => {
+        const { mod, plays, spoken } = await load(ios);
+        const s = new mod.Speaker();
+        s.unlockForGesture();
+        const keep = keepPlays(plays)[0].el;
+        const pausesBefore = keep.pauses || 0;
+        s.start(); s.feed("One. Two. Three. "); s.flush();
+        spoken.filter(u => u.text).forEach(u => u.onend());       // every sentence finishes...
+        await micro();
+        // ...the last one has ended so reading is over and the hold is released, but not before that
+        expect(s.busy).toBe(false);
+        expect(keep.paused).toBe(true);
+        spoken.length = 0;
+
+        s.start(); s.feed("First. Second. ");
+        spoken[0].onend(); await micro();                        // first sentence done, second still to come
+        expect(s.busy).toBe(true);
+        expect(keep.paused).toBe(false);                         // still held between the sentences
+    });
+
+    it("forces the playback session each time it takes hold", async () => {
+        const { mod, sessions } = await load(ios);
+        const s = new mod.Speaker();
+        s.unlockForGesture();
+        sessions.length = 0;
+        s.start();
+        expect(sessions.filter(t => t === "playback").length).toBeGreaterThanOrEqual(2);   // start() and the hold
+    });
+
+    it("does nothing before the tap has unlocked it", async () => {
+        const { mod, plays } = await load(ios);
+        const s = new mod.Speaker();
+        s.start(); s.feed("One. ");
+        expect(keepPlays(plays)).toHaveLength(0);
+    });
+
+    it("is never used on other platforms", async () => {
+        const { mod, plays, created } = await load();
+        const s = new mod.Speaker();
+        s.unlockForGesture();
+        s.start(); s.feed("One. Two. "); s.flush(); s.cancel();
+        expect(keepPlays(plays)).toHaveLength(0);
+        expect(created.audio).toBe(0);
+    });
+
+    it("a refused keep-alive (not unlocked) never breaks speech", async () => {
+        const { mod, spoken } = await load(ios);
+        const s = new mod.Speaker();
+        s.unlockForGesture();
+        Audio.reject = "NotAllowedError";
+        expect(() => { s.start(); s.feed("One. "); }).not.toThrow();
+        await micro();
+        expect(spoken.some(u => u.text === "One.")).toBe(true);
     });
 });

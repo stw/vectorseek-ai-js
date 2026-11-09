@@ -146,9 +146,14 @@ describe("Speaker.busy (browser voice)", () => {
 describe("Speaker.busy (server voice)", () => {
     beforeEach(() => {
         globalThis.Audio = class {
-            constructor(url) { this.url = url; Audio.all.push(this); }
-            play() { return Promise.resolve(); }
-            pause() {}
+            constructor() { this.src = ""; this.paused = false; }
+            play() {
+                this.paused = false;
+                const el = this;
+                Audio.all.push({ url: this.src, get paused() { return el.paused; }, onended: () => el.onended && el.onended() });
+                return Promise.resolve();
+            }
+            pause() { this.paused = true; }
         };
         Audio.all = [];
         URL.createObjectURL = vi.fn(() => "blob:x");

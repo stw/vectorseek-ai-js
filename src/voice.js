@@ -14,6 +14,39 @@ export function synthesisSupported() {
     return typeof window !== "undefined" && "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
 }
 
+/** iPhone / iPad (including iPadOS, which reports itself as a Mac with a touch screen). */
+export function isIOSLike() {
+    if (typeof navigator === "undefined") return false;
+    const ua = navigator.userAgent || "";
+    return /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+
+/**
+ * Tell Safari what kind of audio the page is using (Audio Session API, Safari 16.4+). After the microphone
+ * has been used, iOS keeps the "play and record" session, which routes sound to the quiet earpiece. Switching
+ * to "playback" before speaking restores normal speaker volume. A no-op where the API does not exist.
+ */
+export function setAudioSession(type) {
+    try {
+        const session = typeof navigator !== "undefined" ? navigator.audioSession : null;
+        if (session && session.type !== type) session.type = type;
+    } catch (e) { /* not supported / not allowed: nothing to do */ }
+}
+
+/** A short silent WAV, used to unlock audio playback inside a user gesture. */
+function silentWavUrl() {
+    const samples = 400;                                   // 50 ms at 8 kHz
+    const bytes = new Uint8Array(44 + samples);
+    const view = new DataView(bytes.buffer);
+    const text = (o, str) => { for (let i = 0; i < str.length; i++) bytes[o + i] = str.charCodeAt(i); };
+    text(0, "RIFF"); view.setUint32(4, 36 + samples, true); text(8, "WAVE"); text(12, "fmt ");
+    view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+    view.setUint32(24, 8000, true); view.setUint32(28, 8000, true); view.setUint16(32, 1, true);
+    view.setUint16(34, 8, true); text(36, "data"); view.setUint32(40, samples, true);
+    bytes.fill(128, 44);                                   // 8-bit silence
+    return URL.createObjectURL(new Blob([bytes], { type: "audio/wav" }));
+}
+
 /** Strip markdown, HTML, URLs and citation markers so text reads naturally. */
 export function cleanForSpeech(text) {
     return String(text || "")
@@ -66,6 +99,35 @@ export class Speaker {
         this._idleTimer = null;
         this.idleMs = 30000;        // an answer with no new text for this long is treated as finished
         this.onBusyChange = null;   // (busy) => void, fired when reading starts / ends
+        this._el = null;            // ONE shared <audio> element, unlocked once by a tap (see unlock())
+        this._utterances = new Set();   // keep utterances referenced until they finish (browsers drop them otherwise)
+        this.blocked = false;       // the browser refused to speak without a tap
+        this._blocked = [];         // sentences waiting for that tap
+        this.onBlockedChange = null;    // (blocked) => void
+    }
+
+    _setBlocked(blocked) {
+        if (this.blocked === blocked) return;
+        this.blocked = blocked;
+        if (this.onBlockedChange) this.onBlockedChange(blocked);
+    }
+
+    /** The browser refused to start speech/audio without a tap: remember the text so a tap can replay it. */
+    _block(text) {
+        if (text && !this._blocked.includes(text)) this._blocked.push(text);
+        this._setBlocked(true);
+    }
+
+    /**
+     * Call from the visitor's tap on the speaker button while blocked: unlocks audio and reads the answer
+     * from the sentences that were refused.
+     */
+    replayBlocked() {
+        const texts = this._blocked.splice(0);
+        this._setBlocked(false);
+        this.unlock(true);
+        texts.forEach(t => this._speak(t));
+        this._notify();
     }
 
     /**
@@ -116,17 +178,49 @@ export class Speaker {
     start() {
         this.cancel();
         this.active = true;
+        setAudioSession("playback");       // the microphone may just have been used: restore full volume
         this._armIdle();
         this._notify();
     }
 
-    /** Prime speechSynthesis inside a user gesture (needed by Safari/iOS). */
-    unlock() {
-        if (!this.supported || this._unlocked) return;
-        const u = new SpeechSynthesisUtterance("");
-        u.volume = 0;
-        window.speechSynthesis.speak(u);
+    /**
+     * iOS only lets speech and audio start from a tap. Call this inside one (the microphone tap) and later
+     * speech, which starts without a tap once the answer arrives, is allowed. No-op elsewhere: on desktop
+     * Safari, speaking at the instant recognition starts can abort the recognition.
+     */
+    unlockForGesture() {
+        if (isIOSLike()) this.unlock();
+    }
+
+    /** Prime speechSynthesis and the shared audio element inside a user gesture. */
+    unlock(force = false) {
+        if (this._unlocked && !force) return;
         this._unlocked = true;
+        if (synthesisSupported()) {
+            const u = new SpeechSynthesisUtterance("");
+            u.volume = 0;
+            window.speechSynthesis.speak(u);
+        }
+        if (typeof Audio !== "undefined" && typeof URL !== "undefined" && URL.createObjectURL) {
+            try {
+                const el = this._audioEl();
+                const url = silentWavUrl();
+                el.src = url;
+                const p = el.play();
+                const done = () => URL.revokeObjectURL(url);
+                if (p && p.then) p.then(done, done); else done();
+            } catch (e) { /* best effort */ }
+        }
+    }
+
+    /** The one audio element used for every server-voice clip. iOS unlocks an element, not the page. */
+    _audioEl() {
+        if (!this._el) {
+            this._el = new Audio();
+            this._el.preload = "auto";
+            if (this._el.setAttribute) this._el.setAttribute("playsinline", "");
+        }
+        return this._el;
     }
 
     feed(chunk) {
@@ -164,6 +258,8 @@ export class Speaker {
         this._queue.forEach(item => item.discard && item.discard());
         this._queue = [];
         this._stopAudio();
+        this._blocked = [];
+        this._setBlocked(false);
         // Only cancel when something is actually queued/speaking: calling cancel() while
         // recognition is starting aborts it in Safari.
         const synth = synthesisSupported() ? window.speechSynthesis : null;
@@ -187,7 +283,7 @@ export class Speaker {
     _stopAudio() {
         if (this._audio) {
             try { this._audio.pause(); } catch (e) { /* ignore */ }
-            this._audio = null;
+            this._audio = null;            // (the shared element itself is kept: it stays unlocked)
         }
         // release the pump if it is waiting for this clip to end
         if (this._endPlay) { const end = this._endPlay; this._endPlay = null; end(); }
@@ -209,18 +305,49 @@ export class Speaker {
         this._track(this._speakBrowser(text));
     }
 
+    /** Best installed voice for the page language (exact match, then same language), local voices first. */
+    _voice() {
+        if (!synthesisSupported() || !window.speechSynthesis.getVoices) return null;
+        const voices = window.speechSynthesis.getVoices() || [];
+        if (!voices.length) return null;
+        const lang = String(this.lang).toLowerCase();
+        const base = lang.split("-")[0];
+        const score = (v) => {
+            const l = String(v.lang || "").toLowerCase().replace("_", "-");
+            const match = l === lang ? 2 : l.split("-")[0] === base ? 1 : 0;
+            return match ? match * 10 + (v.localService ? 2 : 0) + (v.default ? 1 : 0) : -1;
+        };
+        const best = voices.map(v => [score(v), v]).filter(([n]) => n >= 0).sort((a, b) => b[0] - a[0])[0];
+        return best ? best[1] : null;
+    }
+
     _speakBrowser(text) {
         if (!synthesisSupported()) return Promise.resolve();
         return new Promise(resolve => {
             let done = false;
-            const finish = () => { if (!done) { done = true; clearTimeout(timer); resolve(); } };
+            const finish = () => { if (!done) { done = true; clearTimeout(timer); this._utterances.delete(u); resolve(); } };
             // some browsers never fire end/error (e.g. after cancel): don't let the UI wait forever
             const timer = setTimeout(finish, 4000 + text.length * 120);
+            const synth = window.speechSynthesis;
             const u = new SpeechSynthesisUtterance(text);
             u.lang = this.lang;
+            u.volume = 1;                      // explicit: some iOS builds start from a low value
+            u.rate = 1;
+            u.pitch = 1;
+            const voice = this._voice();
+            if (voice) u.voice = voice;
             u.onend = finish;
-            u.onerror = finish;
-            window.speechSynthesis.speak(u);
+            u.onerror = (e) => {
+                const reason = e && e.error;
+                console.debug("[voice] speech error", reason);
+                // "not-allowed": the browser wants a tap first. Keep the text so a tap on the speaker button can replay it.
+                if (reason === "not-allowed") this._block(text);
+                finish();
+            };
+            this._utterances.add(u);           // browsers can garbage-collect a playing utterance and cut it off
+            setAudioSession("playback");
+            if (synth.paused && synth.resume) synth.resume();   // iOS can be left paused after an interruption
+            synth.speak(u);
         });
     }
 
@@ -239,11 +366,14 @@ export class Speaker {
 
     _playUrl(url) {
         return new Promise((resolve, reject) => {
-            const audio = new Audio(url);
+            const audio = this._audioEl();
             this._audio = audio;
+            setAudioSession("playback");
+            audio.volume = 1;
             this._endPlay = () => resolve(false);
             audio.onended = () => { this._endPlay = null; resolve(true); };
             audio.onerror = () => { this._endPlay = null; reject(new Error("audio error")); };
+            audio.src = url;
             const p = audio.play();
             if (p && p.catch) p.catch(reject);     // e.g. autoplay blocked
         });
@@ -259,12 +389,20 @@ export class Speaker {
                 const url = await item.audio;
                 if (gen !== this._gen) { if (url) URL.revokeObjectURL(url); continue; }
                 let played = false;
+                let refused = false;
                 if (url) {
-                    try { played = await this._playUrl(url); } catch (err) { played = false; }
+                    try {
+                        played = await this._playUrl(url);
+                    } catch (err) {
+                        played = false;
+                        console.debug("[voice] audio playback failed", err && err.name, err && err.message);
+                        refused = !!err && err.name === "NotAllowedError";    // needs a tap, so speechSynthesis will be refused too
+                    }
                     URL.revokeObjectURL(url);
                     this._audio = null;
                 }
                 if (gen !== this._gen) continue;
+                if (refused) { this._block(item.text); played = true; }
                 if (!played) await this._speakBrowser(item.text);   // fallback keeps the answer audible
                 if (gen === this._gen) {
                     this._pending = Math.max(0, this._pending - 1);
@@ -292,8 +430,11 @@ export class Dictation {
         this.listening ? this.stop() : this.start();
     }
 
-    start() {
+    start(isRetry = false) {
         if (!this.supported || this.listening) return;
+        if (!isRetry) this._retries = 0;
+        const startedAt = Date.now();
+        let spuriousAbort = false;
         const rec = new SR();
         rec.lang = this.lang;
         rec.interimResults = true;
@@ -329,6 +470,9 @@ export class Dictation {
                 "audio-capture": "No microphone found.",
                 "network": "Speech service unavailable (browsers such as Brave block it). Try Chrome, Edge or Safari.",
             };
+            // Safari can abort recognition a moment after it starts when audio output starts at the same time
+            // (the session is switching between playback and recording). Not the visitor's doing: retry once.
+            if (e.error === "aborted" && !this._aborted && !gotResult && Date.now() - startedAt < 2000) spuriousAbort = true;
             if (e.error === "network" && this.cb.onUnavailable) {
                 gotError = true;
                 this.cb.onUnavailable("network");
@@ -342,6 +486,12 @@ export class Dictation {
             log("ended; final text:", JSON.stringify(finalText));
             this.listening = false;
             this.rec = null;
+            if (spuriousAbort && !gotResult && !this._aborted && (this._retries || 0) < 1) {
+                this._retries = (this._retries || 0) + 1;
+                log("recognition was aborted right after starting; retrying once");
+                setTimeout(() => this.start(true), 350);
+                return;                                           // not a failure and not an end: stay quiet
+            }
             this.cb.onEnd && this.cb.onEnd();
             const text = finalText.trim();
             finalText = "";
@@ -435,6 +585,7 @@ export class ServerDictation {
         if (this._aborted) { this._release(stream); this.listening = false; return; }
 
         this._stream = stream;
+        setAudioSession("play-and-record");            // iOS: recording needs this; playback is restored when we stop
         const mimeType = pickMimeType();
         const chunks = [];
         let recorder;
@@ -479,7 +630,10 @@ export class ServerDictation {
         this._timers.forEach(t => clearInterval(t) || clearTimeout(t));
         this._timers = [];
         if (this._audioCtx) { try { this._audioCtx.close(); } catch (e) { /* ignore */ } this._audioCtx = null; }
-        if (stream) stream.getTracks().forEach(t => t.stop());
+        if (stream) {
+            stream.getTracks().forEach(t => t.stop());
+            setAudioSession("playback");               // microphone released: back to full-volume output
+        }
     }
 
     _watchSilence(stream) {

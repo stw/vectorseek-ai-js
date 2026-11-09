@@ -42,7 +42,7 @@ Choose to include VectorSeek in your search results page, or add a VectorSeek qu
 
 ```html
 <div id="vectorseek" data-key="<Your Key>" data-voice="true"></div>
-<script type="module" src="https://cdn.jsdelivr.net/gh/stw/vectorseek-ai-js@v0.0.12/src/main.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/gh/stw/vectorseek-ai-js@v0.0.13/src/main.js"></script>
 
 ```
 
@@ -81,6 +81,11 @@ Yes, you can add your url with sitemap as one of the urls, ex. https://vectorsee
 3. Example of AI-generated answers from site content
 
 ## Changelog
+
+### 0.0.13
+* mobile Safari / iOS voice: speech and audio are unlocked by the microphone tap, so answers are read reliably; playback is switched back to full volume after the microphone has been used (Audio Session API); server-voice clips share one audio element; if the browser still refuses to speak, the speaker button pulses and a tap reads the answer
+* voice: speech utterances are kept alive until they finish, volume/rate are set explicitly, the best matching local voice is chosen, and a paused speech engine is resumed
+* voice: recognition that Safari aborts right after starting is retried once
 
 ### 0.0.12
 * fix: the per-answer helpful / not helpful buttons were invisible in conversation mode

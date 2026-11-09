@@ -18,10 +18,15 @@ async function load({ synthesis = true } = {}) {
     globalThis.window = win;
     globalThis.document = { documentElement: { lang: "en-US" } };
     Object.defineProperty(globalThis, "navigator", { value: { language: "en-US" }, configurable: true });
+    // ONE shared element is reused for every clip (that is what keeps it unlocked on iOS); `audios` records
+    // each clip that is played through it.
     globalThis.Audio = class {
-        constructor(url) { this.url = url; this.paused = false; audios.push(this); }
+        constructor() { this.src = ""; this.paused = false; }
         play() {
-            if (Audio.reject) return Promise.reject(new Error("blocked"));
+            this.paused = false;
+            const el = this;
+            audios.push({ url: this.src, get paused() { return el.paused; }, onended: () => el.onended && el.onended() });
+            if (Audio.reject) return Promise.reject(Object.assign(new Error("blocked"), { name: Audio.rejectName || "Error" }));
             if (Audio.autoEnd) setTimeout(() => this.onended && this.onended(), 0);
             return Promise.resolve();
         }

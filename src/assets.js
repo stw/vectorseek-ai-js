@@ -524,6 +524,11 @@ input {
 .vs-voice-btn.vs-listening:disabled {
     opacity: 1;
 }
+.vs-voice-btn.vs-attention {
+    border-color: #fd7e14;
+    color: #fd7e14;
+    animation: vs-pulse 1.2s infinite;
+}
 .vs-voice-btn.vs-conversation:not(.vs-listening) {
     border-color: #198754;
     color: #198754;

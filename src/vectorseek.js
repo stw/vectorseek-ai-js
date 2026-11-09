@@ -155,6 +155,11 @@ jQuery(document).ready(function($) {
             voiceUi.onSpeaking(busy);
             if (!busy) handsFree.readingEnded();
         };
+        speaker.onBlockedChange = function(blocked) {     // the browser refused to speak without a tap (iOS)
+            $speak.toggleClass('vs-attention', blocked);
+            if (blocked) $status.text('Tap the speaker button to hear the answer');
+            else if ($status.text() === 'Tap the speaker button to hear the answer') $status.text('');
+        };
         $stop.on('click', function() {
             console.debug('[voice] stop pressed (reading=' + speaker.busy + ')');
             voiceUi.reset();                     // make sure the mic is usable again, whatever state we were in
@@ -187,8 +192,11 @@ jQuery(document).ready(function($) {
             }
             handsFree.markManual();
             dictation.toggle();
+            speaker.unlockForGesture();   // iOS only speaks after a tap: this tap is the permission
         });
         $speak.on('click', function() {
+            if (speaker.blocked) { speaker.replayBlocked(); return; }   // the browser refused to speak: this tap allows it
+            speaker.unlockForGesture();
             const mute = !speaker.muted;
             speaker.setMuted(mute);
             $speak.toggleClass('vs-muted', mute)

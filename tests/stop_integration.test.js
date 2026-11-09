@@ -25,8 +25,13 @@ async function setup({ server = false } = {}) {
     globalThis.SpeechSynthesisUtterance = class { constructor(t) { this.text = t; } };
     window.SpeechSynthesisUtterance = globalThis.SpeechSynthesisUtterance;
     globalThis.Audio = class {
-        constructor(url) { this.url = url; this.paused = false; audios.push(this); }
-        play() { return Promise.resolve(); }
+        constructor() { this.src = ""; this.paused = false; }
+        play() {
+            this.paused = false;
+            const el = this;
+            audios.push({ url: this.src, get paused() { return el.paused; }, onended: () => el.onended && el.onended() });
+            return Promise.resolve();
+        }
         pause() { this.paused = true; }
     };
     URL.createObjectURL = vi.fn(() => "blob:x");

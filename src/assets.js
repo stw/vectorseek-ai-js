@@ -457,6 +457,218 @@ input {
     background-color: #dc3545;
 }
 
+.vs-input-wrap {
+    position: relative;
+}
+.vs-voice-controls {
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    gap: 4px;
+    z-index: 1;
+}
+/* make room for the buttons inside the input, only for the buttons that are visible */
+.vs-input-wrap:has(.vs-voice-btn:not([hidden])) .vs-form-control,
+.vs-input-wrap:has(.vs-voice-btn:not([hidden])) .form-control {
+    padding-left: 44px;
+}
+.vs-input-wrap:has(.vs-voice-btn:nth-child(2):not([hidden])) .vs-form-control,
+.vs-input-wrap:has(.vs-voice-btn:nth-child(2):not([hidden])) .form-control {
+    padding-left: 80px;
+}
+.vs-voice-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid #ced4da;
+    border-radius: 50%;
+    background: #fff;
+    color: #444;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.vs-voice-btn:hover, .vs-voice-btn:focus-visible {
+    border-color: #0d6efd;
+    color: #0d6efd;
+}
+.vs-voice-btn.vs-listening {
+    background: #dc3545;
+    border-color: #dc3545;
+    color: #fff;
+    animation: vs-pulse 1.2s infinite;
+}
+.vs-voice-btn.vs-muted {
+    color: #999;
+}
+.vs-voice-status {
+    font-size: 0.85em;
+    color: #6c757d;
+    min-height: 1.2em;
+}
+@keyframes vs-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(220,53,69,.5); }
+    70% { box-shadow: 0 0 0 8px rgba(220,53,69,0); }
+    100% { box-shadow: 0 0 0 0 rgba(220,53,69,0); }
+}
+.vs-voice-btn[hidden] {
+    display: none;
+}
+.vs-voice-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+.vs-voice-btn.vs-listening:disabled {
+    opacity: 1;
+}
+.vs-voice-btn.vs-conversation:not(.vs-listening) {
+    border-color: #198754;
+    color: #198754;
+    box-shadow: 0 0 0 2px rgba(25, 135, 84, 0.25);
+}
+.vs-stop-btn {
+    color: #dc3545;
+    border-color: #dc3545;
+}
+.vs-stop-btn:hover, .vs-stop-btn:focus-visible {
+    background: #dc3545;
+    border-color: #dc3545;
+    color: #fff;
+}
+.vs-input-wrap:has(.vs-voice-btn:nth-child(3):not([hidden])) .vs-form-control,
+.vs-input-wrap:has(.vs-voice-btn:nth-child(3):not([hidden])) .form-control {
+    padding-left: 116px;
+}
+
+/* ongoing conversation */
+.vs-turn {
+    padding-top: 12px;
+    margin-bottom: 12px;
+    border-top: 1px solid #e3e6ea;
+}
+.vs-turn:first-child {
+    border-top: 0;
+    padding-top: 0;
+}
+.vs-question {
+    display: inline-block;
+    max-width: 90%;
+    margin-bottom: 8px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    background: #eef1f5;
+    font-weight: 600;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+.vs-turn-rate {
+    margin-top: 8px;
+    font-size: 0.85em;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.vs-rate-btn {
+    border: 0;
+    background: none;
+    padding: 2px 4px;
+    cursor: pointer;
+    color: inherit;
+}
+.vs-rate-btn:hover, .vs-rate-btn:focus-visible {
+    color: #0d6efd;
+}
+.vs-conv-tools {
+    text-align: right;
+    margin-bottom: 4px;
+}
+.vs-conv-tools[hidden] {
+    display: none;
+}
+.vs-clear-btn {
+    border: 0;
+    background: none;
+    padding: 0;
+    font-size: 0.85em;
+    color: #6c757d;
+    text-decoration: underline;
+    cursor: pointer;
+}
+.vs-clear-btn:hover, .vs-clear-btn:focus-visible {
+    color: #0d6efd;
+}
+
+/* sources / context accordion (conversation mode) */
+.vs-refs {
+    margin-top: 10px;
+    border: 1px solid #e3e6ea;
+    border-radius: 6px;
+}
+.vs-refs-summary {
+    cursor: pointer;
+    padding: 6px 10px;
+    font-size: 0.9em;
+    color: #495057;
+    user-select: none;
+}
+.vs-refs[open] > .vs-refs-summary {
+    border-bottom: 1px solid #e3e6ea;
+}
+.vs-refs-body {
+    padding: 8px 10px;
+    font-size: 0.9em;
+}
+.vs-refs-body h5 {
+    font-size: 1em;
+    margin: 4px 0 6px;
+}
+.vs-source {
+    padding: 4px 6px;
+    margin-bottom: 4px;
+    border-radius: 4px;
+    overflow-wrap: anywhere;
+}
+.vs-context {
+    padding: 6px 0;
+    border-top: 1px solid #eee;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+.vs-context-type {
+    display: inline-block;
+    font-size: 0.75em;
+    padding: 1px 6px;
+    margin-right: 6px;
+    border-radius: 8px;
+    background: #e7f1ff;
+    color: #0a58ca;
+}
+
+`;
+
+export const MIC_ICON = `
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+  <path d="M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5"/>
+  <path d="M10 8a2 2 0 1 1-4 0V3a2 2 0 1 1 4 0zM8 0a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V3a3 3 0 0 0-3-3"/>
+</svg>
+`;
+
+export const SPEAKER_ICON = `
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+  <path d="M11.536 14.01A8.47 8.47 0 0 0 14.026 8a8.47 8.47 0 0 0-2.49-6.01l-.708.707A7.48 7.48 0 0 1 13.025 8c0 2.071-.84 3.946-2.197 5.303z"/>
+  <path d="M10.121 12.596A6.48 6.48 0 0 0 12.025 8a6.48 6.48 0 0 0-1.904-4.596l-.707.707A5.48 5.48 0 0 1 11.025 8a5.48 5.48 0 0 1-1.61 3.89z"/>
+  <path d="M8.707 11.182A4.5 4.5 0 0 0 10.025 8a4.5 4.5 0 0 0-1.318-3.182L8 5.525A3.5 3.5 0 0 1 9.025 8 3.5 3.5 0 0 1 8 10.475zM6.717 3.55A.5.5 0 0 1 7 4v8a.5.5 0 0 1-.812.39L3.825 10.5H1.5A.5.5 0 0 1 1 10V6a.5.5 0 0 1 .5-.5h2.325l2.363-1.89a.5.5 0 0 1 .529-.06"/>
+</svg>
+`;
+
+export const STOP_ICON = `
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+  <path d="M5 3.5h6A1.5 1.5 0 0 1 12.5 5v6a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 11V5A1.5 1.5 0 0 1 5 3.5"/>
+</svg>
 `;
 
 export const THUMBS_UP = `

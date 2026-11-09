@@ -1,4 +1,4 @@
-import { THUMBS_UP, THUMBS_DOWN, styles } from "./assets.js";
+import { THUMBS_UP, THUMBS_DOWN, MIC_ICON, SPEAKER_ICON, STOP_ICON, styles } from "./assets.js";
 import "./vectorseek.js";
 
 class VectorSeekWidget {
@@ -30,7 +30,15 @@ class VectorSeekWidget {
                 <form>
                     <div class="vs-row">
                         <div class="vs-col vs-mb-3">
-                            <textarea id="vectorseek_query" class="vs-form-control" name="query" cols="80" rows="2" placeholder="Ask a question..."></textarea>
+                            <div class="vs-input-wrap">
+                                <div class="vs-voice-controls">
+                                    <button id="vectorseek_mic" type="button" class="vs-voice-btn" hidden aria-label="Ask by voice" aria-pressed="false" title="Ask by voice">${MIC_ICON}</button>
+                                    <button id="vectorseek_speak" type="button" class="vs-voice-btn" hidden aria-label="Mute spoken answers" aria-pressed="false" title="Spoken answers on">${SPEAKER_ICON}</button>
+                                    <button id="vectorseek_stop" type="button" class="vs-voice-btn vs-stop-btn" hidden aria-label="Stop reading the answer" title="Stop reading the answer">${STOP_ICON}</button>
+                                </div>
+                                <textarea id="vectorseek_query" class="vs-form-control" name="query" cols="80" rows="2" placeholder="Ask a question..."></textarea>
+                            </div>
+                            <div id="vectorseek_voice_status" class="vs-voice-status" role="status" aria-live="polite"></div>
                         </div>
 
                         <div class="vs-col vs-mb-3">

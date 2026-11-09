@@ -41,10 +41,14 @@ Choose to include VectorSeek in your search results page, or add a VectorSeek qu
 2. Add the following code on your site.
 
 ```html
-<div id="vectorseek" data-key="<Your Key>"></div>
-<script type="module" src="https://cdn.jsdelivr.net/gh/stw/vectorseek-ai-js@v0.0.10/src/main.js"></script>
+<div id="vectorseek" data-key="<Your Key>" data-voice="true"></div>
+<script type="module" src="https://cdn.jsdelivr.net/gh/stw/vectorseek-ai-js@v0.0.11/src/main.js"></script>
 
 ```
+
+`data-voice="true"` is optional. It adds a microphone to the search box so visitors can
+ask by voice and hear the answer read aloud. Voice must also be enabled on your project
+(Advanced Settings > Voice). Omit the attribute to leave voice off.
 
 
 ## Frequently Asked Questions
@@ -77,6 +81,13 @@ Yes, you can add your url with sitemap as one of the urls, ex. https://vectorsee
 3. Example of AI-generated answers from site content
 
 ## Changelog
+
+### 0.0.11
+* voice interaction: microphone dictation with auto-submit and spoken answers (opt in with `data-voice="true"`)
+* server-side transcription fallback for browsers without speech recognition (Brave, Firefox)
+* project-selectable AI voices for spoken answers
+* ongoing conversation: keep each question and answer on the page (project setting)
+* hands-free voice conversation: in conversation mode the microphone starts listening again after a spoken answer is read or stopped, when the browser allows it; click the microphone while it is listening on its own to end the conversation
 
 ### 0.0.10
 * add sources and confidence

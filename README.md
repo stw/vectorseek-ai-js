@@ -42,7 +42,7 @@ Choose to include VectorSeek in your search results page, or add a VectorSeek qu
 
 ```html
 <div id="vectorseek" data-key="<Your Key>" data-voice="true"></div>
-<script type="module" src="https://cdn.jsdelivr.net/gh/stw/vectorseek-ai-js@v0.0.11/src/main.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/gh/stw/vectorseek-ai-js@v0.0.12/src/main.js"></script>
 
 ```
 
@@ -81,6 +81,9 @@ Yes, you can add your url with sitemap as one of the urls, ex. https://vectorsee
 3. Example of AI-generated answers from site content
 
 ## Changelog
+
+### 0.0.12
+* fix: the per-answer helpful / not helpful buttons were invisible in conversation mode
 
 ### 0.0.11
 * voice interaction: microphone dictation with auto-submit and spoken answers (opt in with `data-voice="true"`)

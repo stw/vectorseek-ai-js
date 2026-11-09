@@ -103,6 +103,8 @@ export class Speaker {
         this.onBusyChange = null;   // (busy) => void, fired when reading starts / ends
         this._el = null;            // ONE shared <audio> element, unlocked once by a tap (see unlock())
         this._keep = null;          // iOS: silent looping element that holds the audio session open while reading
+        this._ctx = null;           // iOS: one AudioContext for all server-voice clips (see _playWebAudio)
+        this._src = null;           // the Web Audio source that is playing right now
         this._utterances = new Set();   // keep utterances referenced until they finish (browsers drop them otherwise)
         this.blocked = false;       // the browser refused to speak without a tap
         this._blocked = [];         // sentences waiting for that tap
@@ -164,6 +166,16 @@ export class Speaker {
      * speaker. Only on iOS, only while reading, and only once the element has been unlocked by a tap.
      */
     _holdSession(on) {
+        if (this._webAudioWanted()) {
+            // One running AudioContext holds the audio session for the whole answer; release it when reading ends.
+            const ctx = this._ctx;
+            if (!ctx) return;
+            try {
+                if (on) { setAudioSession("playback", { force: true }); const p = ctx.resume(); if (p && p.catch) p.catch(() => {}); }
+                else { const p = ctx.suspend(); if (p && p.catch) p.catch(() => {}); }
+            } catch (e) { /* best effort */ }
+            return;
+        }
         if (!isIOSLike() || !this._keep) return;
         try {
             if (on) {
@@ -174,6 +186,19 @@ export class Speaker {
                 this._keep.pause();
             }
         } catch (e) { /* best effort */ }
+    }
+
+    /** iOS plays server-voice clips through Web Audio: an element's session is released between clips, a context's is not. */
+    _webAudioWanted() {
+        return isIOSLike() && this.usesServer && !!(typeof window !== "undefined" && (window.AudioContext || window.webkitAudioContext));
+    }
+
+    _audioContext() {
+        if (!this._ctx) {
+            const AC = window.AudioContext || window.webkitAudioContext;
+            this._ctx = new AC();
+        }
+        return this._ctx;
     }
 
     _keepEl() {
@@ -244,6 +269,18 @@ export class Speaker {
                 const done = () => URL.revokeObjectURL(url);
                 if (p && p.then) p.then(done, done); else done();
             } catch (e) { /* best effort */ }
+            if (this._webAudioWanted()) {
+                try {                                       // unlock Web Audio: resume + one silent frame, inside the tap
+                    const ctx = this._audioContext();
+                    const p = ctx.resume();
+                    if (p && p.catch) p.catch(() => {});
+                    const silent = ctx.createBuffer(1, 1, 22050);
+                    const src = ctx.createBufferSource();
+                    src.buffer = silent;
+                    src.connect(ctx.destination);
+                    src.start(0);
+                } catch (e) { console.debug("[voice] could not unlock Web Audio", e && e.message); }
+            }
             if (isIOSLike()) {
                 try {                                       // unlock the keep-alive element as well
                     const keep = this._keepEl();
@@ -337,7 +374,6 @@ export class Speaker {
         if (this.usesServer) {
             // start fetching immediately (prefetch) but play strictly in order
             const item = { text, audio: this._fetchAudio(text) };
-            item.discard = () => item.audio.then(url => url && URL.revokeObjectURL(url));
             this._queue.push(item);
             this._pending++;
             this._notify();
@@ -403,10 +439,58 @@ export class Speaker {
             form.append("text", text);
             const res = await fetch(this.server.endpoint, { method: "POST", body: form });
             if (!res.ok) return null;
-            return URL.createObjectURL(await res.blob());
+            return await res.blob();
         } catch (err) {
             return null;
         }
+    }
+
+    /** Play one fetched clip: through Web Audio on iOS, otherwise (or if that fails) through the shared element. */
+    async _playClip(blob) {
+        if (this._webAudioWanted() && this._ctx) {
+            try {
+                return await this._playWebAudio(blob);
+            } catch (err) {
+                if (err && err.name === "NotAllowedError") throw err;      // needs a tap: let the caller hold it for one
+                console.debug("[voice] Web Audio playback failed, using the audio element", err && err.message);
+            }
+        }
+        const url = URL.createObjectURL(blob);
+        try {
+            return await this._playUrl(url);
+        } finally {
+            URL.revokeObjectURL(url);
+        }
+    }
+
+    async _playWebAudio(blob) {
+        const ctx = this._ctx;
+        setAudioSession("playback", { force: true });
+        if (ctx.state !== "running") {
+            try { await ctx.resume(); } catch (e) { /* checked below */ }
+            if (ctx.state !== "running") {
+                throw Object.assign(new Error("audio context is not running"), { name: "NotAllowedError" });
+            }
+        }
+        const data = await blob.arrayBuffer();
+        const buffer = await new Promise((resolve, reject) => {
+            const p = ctx.decodeAudioData(data, resolve, reject);      // callback form works on every Safari
+            if (p && p.catch) p.catch(reject);
+        });
+        return new Promise((resolve) => {
+            const src = ctx.createBufferSource();
+            src.buffer = buffer;
+            src.connect(ctx.destination);
+            this._src = src;
+            this._endPlay = () => {                                   // cancel / Stop
+                src.onended = null;
+                try { src.stop(); } catch (e) { /* already stopped */ }
+                this._src = null;
+                resolve(false);
+            };
+            src.onended = () => { this._endPlay = null; this._src = null; setAudioSession("playback", { force: true }); resolve(true); };
+            src.start(0);
+        });
     }
 
     _playUrl(url) {
@@ -431,19 +515,18 @@ export class Speaker {
             while (this._queue.length) {
                 const gen = this._gen;
                 const item = this._queue.shift();
-                const url = await item.audio;
-                if (gen !== this._gen) { if (url) URL.revokeObjectURL(url); continue; }
+                const clip = await item.audio;
+                if (gen !== this._gen) continue;
                 let played = false;
                 let refused = false;
-                if (url) {
+                if (clip) {
                     try {
-                        played = await this._playUrl(url);
+                        played = await this._playClip(clip);
                     } catch (err) {
                         played = false;
                         console.debug("[voice] audio playback failed", err && err.name, err && err.message);
                         refused = !!err && err.name === "NotAllowedError";    // needs a tap, so speechSynthesis will be refused too
                     }
-                    URL.revokeObjectURL(url);
                     this._audio = null;
                 }
                 if (gen !== this._gen) continue;

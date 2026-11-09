@@ -156,6 +156,18 @@ describe("per-answer rating", () => {
         expect(up.getAttribute("aria-label")).toBe("Yes, helpful");
     });
 
+    it("gives the thumbs their own classes (the old widget-only classes collapsed to 0x0 outside the rating block)", () => {
+        const conv = make();
+        conv.setEnabled(true);
+        conv.startTurn("q");
+        conv.finishTurn({ id: 1, token: "t" });
+        const up = container.querySelector(".vs-rate-up img");
+        const down = container.querySelector(".vs-rate-down img");
+        expect(up.className).toBe("vs-rate-img vs-rate-img-up");
+        expect(down.className).toBe("vs-rate-img vs-rate-img-down");
+        expect(up.classList.contains("vectorseek_thumbs_up")).toBe(false);
+    });
+
     it("falls back to text buttons without images", () => {
         const conv = make({ images: undefined });
         conv.setEnabled(true);

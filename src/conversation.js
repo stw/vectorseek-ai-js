@@ -212,7 +212,7 @@ export class Conversation {
                 const img = doc.createElement("img");
                 img.src = images[kind];
                 img.alt = "";
-                img.className = kind === "up" ? "vectorseek_thumbs_up" : "vectorseek_thumbs_down";
+                img.className = `vs-rate-img vs-rate-img-${kind}`;
                 btn.appendChild(img);
             } else {
                 btn.textContent = fallback;

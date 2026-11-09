@@ -582,6 +582,27 @@ input {
 .vs-rate-btn:hover, .vs-rate-btn:focus-visible {
     color: #0d6efd;
 }
+.vs-rate-btn img {
+    display: inline-block;
+    height: 24px;
+    width: auto;
+    max-width: none;            /* a percentage max-width collapses the image inside a shrink-wrapped button */
+    padding: 3px;
+    border: 1px solid #ccc;
+    vertical-align: middle;
+}
+.vs-rate-btn img.vs-rate-img-up {
+    border-radius: 6px 0 0 6px;
+}
+.vs-rate-btn img.vs-rate-img-down {
+    border-radius: 0 6px 6px 0;
+}
+.vs-rate-btn:hover img.vs-rate-img-up, .vs-rate-btn:focus-visible img.vs-rate-img-up {
+    background-color: #e4f9ee;
+}
+.vs-rate-btn:hover img.vs-rate-img-down, .vs-rate-btn:focus-visible img.vs-rate-img-down {
+    background-color: #f9e4e4;
+}
 .vs-conv-tools {
     text-align: right;
     margin-bottom: 4px;
